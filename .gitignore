@@ -2,6 +2,7 @@
 **/output_images/.DS_Store
 **/.ipynb_checkpoints/**
 **/source_env_carnd.sh
+**/training_images
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
