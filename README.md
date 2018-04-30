@@ -50,8 +50,6 @@ Here is an example of one of each of the `vehicle` and `non-vehicle` classes:
 - Vehicle train image count: 8792
 - Non-vehicle train image count: 8968
 
-Here is an example of those images:
-
 ![Vehicle and non-vehicle images](output_images/vehicle-non-vehicle.png)
 
 The feature extraction code (spatial, color histogram and HOG) is at `In [5]`. This cell contains a set of functions provided by Udacity's lectures to extract the features from an image. The function `extract_features` combine them at `In [6].` `extract_images_features` defines a function to extract features from a list of images (e.g. for test images). 
