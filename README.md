@@ -1,16 +1,28 @@
-# Vehicle Detection
-[![Udacity - Self-Driving Car NanoDegree](https://s3.amazonaws.com/udacity-sdc/github/shield-carnd.svg)](http://www.udacity.com/drive)
+# Udacity Self-Driving Car Engineer Nanodegree - Vehicle Detection
 
+The goal of this project is a software pipeline to detect vehicles in a video.
 
-In this project, your goal is to write a software pipeline to detect vehicles in a video (start with the test_video.mp4 and later implement on full project_video.mp4), but the main output or product we want you to create is a detailed writeup of the project.  Check out the [writeup template](https://github.com/udacity/CarND-Vehicle-Detection/blob/master/writeup_template.md) for this project and use it as a starting point for creating your own writeup.  
+## Prerequisites
 
-Creating a great writeup:
----
-A great writeup should include the rubric points as well as your description of how you addressed each point.  You should include a detailed description of the code used in each step (with line-number references and code snippets where necessary), and links to other supporting documents or external references.  You should include images in your writeup to demonstrate how your code works with examples.  
+To run this project, you need [Anaconda](https://anaconda.org/) or [Miniconda](https://conda.io/miniconda.html) installed (please visit [this link](https://github.com/udacity/CarND-Term1-Starter-Kit/blob/master/README.md) for more information.)    
+Here is a great link for learning more about [Anaconda and Jupyter Notebooks](https://classroom.udacity.com/courses/ud1111).
 
-All that said, please be concise!  We're not looking for you to write a book here, just a brief description of how you passed each rubric point, and references to the relevant code :). 
+## Installation
+To create an environment for this project use the following command:
 
-You can submit your writeup in markdown or use another method and submit a pdf instead.
+```
+conda env create -f environment.yml
+```
+
+After the environment is created, it needs to be activated with the command:
+
+```
+source activate carnd-term1
+```
+
+```
+jupyter notebook Pipeline.ipynb
+```
 
 The Project
 ---
@@ -24,14 +36,102 @@ The goals / steps of this project are the following:
 * Run your pipeline on a video stream (start with the test_video.mp4 and later implement on full project_video.mp4) and create a heat map of recurring detections frame by frame to reject outliers and follow detected vehicles.
 * Estimate a bounding box for vehicles detected.
 
-Here are links to the labeled data for [vehicle](https://s3.amazonaws.com/udacity-sdc/Vehicle_Tracking/vehicles.zip) and [non-vehicle](https://s3.amazonaws.com/udacity-sdc/Vehicle_Tracking/non-vehicles.zip) examples to train your classifier.  These example images come from a combination of the [GTI vehicle image database](http://www.gti.ssr.upm.es/data/Vehicle_database.html), the [KITTI vision benchmark suite](http://www.cvlibs.net/datasets/kitti/), and examples extracted from the project video itself.   You are welcome and encouraged to take advantage of the recently released [Udacity labeled dataset](https://github.com/udacity/self-driving-car/tree/master/annotations) to augment your training data.  
+### Writeup 
 
-Some example images for testing your pipeline on single frames are located in the `test_images` folder.  To help the reviewer examine your work, please save examples of the output from each stage of your pipeline in the folder called `ouput_images`, and include them in your writeup for the project by describing what each image shows.    The video called `project_video.mp4` is the video your pipeline should work well on.  
+The project code could be found on the [Vehicle Detection and Tracking notebook](Vehicle_Detection_Tracking.ipynb).
 
-**As an optional challenge** Once you have a working pipeline for vehicle detection, add in your lane-finding algorithm from the last project to do simultaneous lane-finding and vehicle detection!
+### Histogram of Oriented Gradients (HOG)
 
-**If you're feeling ambitious** (also totally optional though), don't stop there!  We encourage you to go out and take video of your own, and show us how you would implement this project on a new video!
+#### 1. Explain how (and identify where in your code) you extracted HOG features from the training images.
 
-## How to write a README
-A well written README file can enhance your project and portfolio.  Develop your abilities to create professional README files by completing [this free course](https://www.udacity.com/course/writing-readmes--ud777).
+I started by loading in all the `vehicle` and `non-vehicle` images at `In [2]`.
+Here is an example of one of each of the `vehicle` and `non-vehicle` classes:
 
+- Vehicle train image count: 8792
+- Non-vehicle train image count: 8968
+
+Here is an example of those images:
+
+![Vehicle and non-vehicle images](output_images/vehicle-non-vehicle.png)
+
+The feature extraction code (spatial, color histogram and HOG) is at `In [5]`. This cell contains a set of functions provided by Udacity's lectures to extract the features from an image. The function `extract_features` combine them at `In [6].` `extract_images_features` defines a function to extract features from a list of images (e.g. for test images). 
+
+I then explored different color spaces and different `skimage.hog()` parameters (`orientations`, `pixels_per_cell`, and `cells_per_block`).  
+I grabbed random images from each of the two classes and displayed them to get a feel for what the `skimage.hog()` output looks like at `In [7]`.
+Here is an example using the `YCrCb` color space and HOG parameters of `orientations=9`, `pixels_per_cell=(8, 8)` and `cells_per_block=(2, 2)`:
+
+![HOG Vehicle and non-vehicle images](output_images/hog_features_vehicle.png)
+
+![HOG Vehicle and non-vehicle images](output_images/hog_features_non_vehicle.png)
+
+
+#### 2. Explain how you settled on your final choice of HOG parameters.
+
+I spent a lot of time up front exploring different color spaces to determine which would give the best results in terms of prediction accuracy. 
+I finally settled on the YcrCb color space, as this gave high test set accuracy scores with my Support Vector Classifier and also gave the fewest false positives in the test videos.
+
+The final parameters are the following:
+
+|Parameter|Value|
+|:--------|----:|
+|Color Space|YCrCb|
+|HOG Orient|9|
+|HOG Pixels per cell|8|
+|HOG Cell per block|2|
+|HOG Channels|All|
+|Spatial bin size| (16,16)|
+|Histogram bins|32|
+|Histogram range|(0,256)|
+|Classifier|LinearSVC|
+|Scaler|StandardScaler|
+
+
+#### 3. Describe how (and identify where in your code) you trained a classifier using your selected HOG features (and color features if you used them).
+
+I use a Linear Support Vector Machine for classification at `In [9]` and with the feature set mentioned above, it achieves 99.3% test accuracy.
+I split the dataset into training and test sets with a 80/20% split. I regularize the data using a StandardScalar. I then train a LinearSVC to create a predition model.
+In addition to the LinearSVC, I use a CalibratedClassifierCV in order to be able to extract classification probabilities from the predictions.
+
+### Sliding Window Search
+
+#### 1. Describe how (and identify where in your code) you implemented a sliding window search.  How did you decide what scales to search and how much to overlap windows?
+
+My first approach to implement sliding windows was to calculate all the windows and then apply the feature extraction to each one of them to find the one containing a car. 
+It is implemented on `In [12]`. Cells `In [13]` and `In [14]` contains the code for loading the test images, applying the classifier to the images and drawing boxes. 
+I decided to use multi-scale sliding windows over the image (256x256, 128X128 and 64x64 pixels). The scales and overlap parameter where found by experimenting on them until a successful result was found. The following image shows the results of this experimentation on the test images:
+
+![Sliding windows](output_images/sliding_windows.png)
+
+To combine the boxes found there and eliminate some false positives, a heat map as implemented with a threshold and the function `label()` from `scipy.ndimage.measurements` was used to find where the cars were. The code for this implementation could be found on `In [18]`, and the next image shows the results on the test images:
+
+![Sliding windows with heatmap and threshold](output_images/sliding_windows_heatmap_labeled.png)
+
+
+#### 2. Show some examples of test images to demonstrate how your pipeline is working. What did you do to optimize the performance of your classifier?
+
+The performance of the method calculating HOG on each particular window was very slow (about 10 sec to process one frame). To improve the processing performance, a HOG sub-sampling was implemented as suggested on Udacity's lectures. The implementation of this method could be found on `In [22]`. The following image shows the results applied to the test images (the same heatmap and threshold procedure was applied as well on `In [23]`):
+
+![Sliding windows with HOG sub-sampling](output_images/sliding_windows_hog_subsampling.png)
+
+### Video Implementation
+
+#### 1. Provide a link to your final video output.  Your pipeline should perform reasonably well on the entire project video (somewhat wobbly or unstable bounding boxes are ok as long as you are identifying the vehicles most of the time with minimal false positives.)
+
+The video output could be found [project_video.mp4](output_videos/project_video.mp4)
+
+
+#### 2. Describe how (and identify where in your code) you implemented some kind of filter for false positives and some method for combining overlapping bounding boxes.
+
+Some effort was done already to minimize false positives using a heatmap and threshold in the pipeline, but it was not enough. The overlapping bounding boxes were resolved by using the function `label()` from `scipy.ndimage.measurements` to find the cars. To filter false positives, the image heatmap map was averaged over three consecutive frames. The implementation could be found on `In [27]`
+
+### Discussion
+
+#### 1. Briefly discuss any problems / issues you faced in your implementation of this project.  Where will your pipeline likely fail?  What could you do to make it more robust?
+
+- The performance of the pipeline could be improved by trying to decrease the amount of space to search for windows. It takes around 3 seconds to process each frame currently.
+
+- Implement the same with a deep learning approach in order to increase the speed.
+
+- More than one scale could be used to find the windows and apply them on the heatmap.
+
+- The windows size could change for different X and Y values to minimize the number of windows to process.
